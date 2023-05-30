@@ -976,3 +976,413 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+/*DISPARADORES
+1—chequeo—------------
+Disparador después de la inserción:
+Este disparador se activará después de insertar un nuevo registro en la tabla chequeo y actualizará la fecha y hora de la última inserción en la tabla animal.
+
+DELIMITER //
+
+CREATE TRIGGER after_insert_chequeo
+AFTER INSERT ON chequeo
+FOR EACH ROW
+BEGIN
+    UPDATE animal
+    SET ultima_insercion = NOW()
+    WHERE id_animal = NEW.id_animal;
+END//
+
+DELIMITER ;
+2—----animal—---------------------
+Disparador antes de la modificación:
+Este disparador se activará antes de modificar un registro en la tabla animal y verificará si el nuevo valor del campo peso es superior al valor máximo permitido. Si es así, se cancelará la modificación y se generará un mensaje de error.
+DELIMITER //
+
+CREATE TRIGGER before_update_animal
+BEFORE UPDATE ON animal
+FOR EACH ROW
+BEGIN
+    DECLARE max_peso INT;
+    SET max_peso = 1000; -- Valor máximo permitido para el peso
+    
+    IF NEW.peso > max_peso THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: El peso excede el límite permitido.';
+    END IF;
+END//
+
+DELIMITER ;
+
+
+
+
+
+
+3------- chequeo—-----------
+Disparador después de la eliminación:
+Este disparador se activará después de eliminar un registro de la tabla animal y eliminará los registros correspondientes en la tabla chequeo que estén asociados al animal eliminado.
+DELIMITER //
+
+CREATE TRIGGER after_delete_animal
+AFTER DELETE ON animal
+FOR EACH ROW
+BEGIN
+    DELETE FROM chequeo WHERE id_animal = OLD.id_animal;
+END//
+DELIMITER ;
+
+—---alimento—------------------------
+1-Este disparador se activará después de insertar una nueva fila en la tabla alimento. Actualizará el nombre del tipo de alimento en la tabla tipo_alimento correspondiente al id_tipo alimento recién insertado
+DELIMITER //
+CREATE TRIGGER trigger_actualizar_tipo_alimento AFTER INSERT ON alimento
+FOR EACH ROW
+BEGIN
+    UPDATE tipo_alimento SET nombre = NEW.nombre WHERE id_tipo_alimento = NEW.id_tipo_alimento;
+END //
+DELIMITER ;
+—------procedimiento—-------------------------------
+En el ejemplo anterior, se crea un disparador llamado trigger_actualizar_alimento que se ejecutará después de insertar una nueva fila en la tabla de alimentos. En este caso, el disparador realiza una acción de inserción en la tabla log_alimento, que podría ser utilizada para rastrear los cambios o realizar algún tipo de registro.
+
+CREATE TRIGGER trigger_actualizar_alimento AFTER INSERT ON alimento FOR EACH ROW BEGIN INSERT INTO log_alimento (nombre_alimento, fecha) VALUES (NEW.nombre, NOW()); END;
+—---------suministros—--------------
+En este ejemplo, el disparador se activa después de una operación de actualización (UPDATE) en la tabla "suministro". Dentro del bloque BEGIN...END, se utiliza la instrucción UPDATE para actualizar la tabla "inventario" con la información modificada del suministro.
+CREATE TRIGGER suministro_trigger AFTER UPDATE ON suministro FOR EACH ROW BEGIN -- Actualizar la tabla "inventario" con la información modificada del suministro UPDATE inventario SET cantidad = NEW.cantidad, hora = NEW.hora WHERE id_suministro = OLD.id_suministro; END;
+
+
+
+
+
+—----------------tipo—------------------------------------------------
+En este ejemplo, el disparador se activará después de cualquier actualización en la tabla tipo. Utiliza la función CURRENT_TIMESTAMP para obtener la fecha y hora actuales y actualiza el campo fecha_actualizacion de la fila afectada por la actualización.
+
+CREATE TRIGGER after_tipo_update AFTER UPDATE ON tipo FOR EACH ROW BEGIN -- Actualizar la fecha de actualización UPDATE tipo SET fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_tipo = NEW.id_tipo; END;
+
+—-------------------tipo alimento—--------------------------------
+En este ejemplo, el disparador se activará antes de cualquier modificación en la tabla tipo_alimento. Utiliza la función CONCAT para agregar el prefijo "Prefijo: " al valor de nombre que se está intentando modificar.
+
+CREATE TRIGGER before_tipo_alimento_update BEFORE UPDATE ON tipo_alimento FOR EACH ROW BEGIN -- Modificar la descripción SET NEW.nombre = CONCAT('Prefijo: ', NEW.nombre); END;
+
+—----------tipo animal—------------------------------------
+en este ejemplo, se han definido dos disparadores. El primero, before_tipo_animal_update, se activa antes de cualquier modificación en la tabla tipo_animal y modifica automáticamente el valor del campo descripcion en caso de actualización. El segundo, before_tipo_animal_delete, se activa antes de eliminar una fila de la tabla y también modifica el valor de descripcion, en este caso en la fila que está siendo eliminada.
+DELIMITER //
+
+CREATE TRIGGER before_tipo_animal_update
+BEFORE UPDATE ON tipo_animal
+FOR EACH ROW
+BEGIN
+    -- Modificar la raza en caso de actualización
+    SET NEW.raza = UPPER(NEW.raza);
+END//
+
+CREATE TRIGGER before_tipo_animal_delete
+BEFORE DELETE ON tipo_animal
+FOR EACH ROW
+BEGIN
+    -- Modificar la raza en caso de eliminación
+    SET OLD.raza = UPPER(OLD.raza);
+END//
+
+DELIMITER ;
+
+
+—-----------------trabajador—-------------------------------
+En este ejemplo, se utiliza la instrucción INSERT INTO para insertar un nuevo registro en la tabla "registro_trabajador". Se captura el ID del nuevo trabajador (NEW.id_trabajador) y se utiliza la función NOW() para obtener la fecha y hora actual y registrarla en el campo "fecha_registro" de la tabla "registro_trabajador"
+
+CREATE TRIGGER trabajador_trigger AFTER INSERT ON trabajor FOR EACH ROW BEGIN -- Actualizar la tabla "registro_trabajador" con la información del nuevo trabajador INSERT INTO registro_trabajador (id_trabajador, fecha_registro) VALUES (NEW.id_trabajador, NOW()); END;
+
+
+—---------------veterinario—------------------------------------------
+En este ejemplo, el disparador se activa después de una operación de actualización (UPDATE) en la tabla "veterinario". Dentro del bloque BEGIN...END, se utiliza la instrucción UPDATE para actualizar la tabla "registro_veterinario" con la información modificada del veterinario.
+CREATE TRIGGER veterinario_trigger AFTER UPDATE ON veterinario FOR EACH ROW BEGIN -- Actualizar la tabla "registro_veterinario" con la información modificada del veterinario UPDATE registro_veterinario SET nombre = NEW.nombre, telefono = NEW.telefono, especializacion = NEW.especializacion WHERE id_veterinario = OLD.id_veterinario; END;
+
+
+
+
+
+
+
+
+
+
+*Crear 10 vistas con  su respectivo enunciado 
+1----"Crear una vista llamada vista_alimento que muestra los campos nombre y precio de la tabla productos. Luego, realizar una consulta utilizando la vista vista_alimento mediante la siguiente instrucción:"
+SELECT * FROM vista_alimento;Esta consulta mostrará todos los registros y campos de la vista vista_alimento, que a su vez obtiene los datos de la tabla productos.
+-- Crear la vista CREATE VIEW vista_animal AS SELECT peso, edad FROM animal;
+2----Vista de los animales y su tipo de alimento:
+CREATE VIEW vista_animales_alimento AS
+SELECT a.id_animal, a.peso, a.edad, a.genero, t.tipo AS tipo, al.nombre AS tipo_alimento
+FROM animal a
+INNER JOIN tipo t ON a.id_tipo_animal = t.id_tipo
+INNER JOIN alimento al ON a.id_tipo_animal = al.id_tipo_alimento;
+3----Vista de los animales y sus chequeos veterinarios:
+CREATE VIEW vista_animales_chequeo AS SELECT a.id_animal, a.peso, a.edad, a.genero, c.fecha_chequeo, c.peso AS peso_chequeo, c.recomendaciones FROM animal a INNER JOIN chequeo c ON a.id_animal = c.id_animal;
+4----Vista de los animales y los procedimientos realizados:
+CREATE VIEW vista_animales_procedimiento AS SELECT a.id_animal, a.peso, a.edad, a.genero, p.fecha_chequeo, t.tipo AS tipo_procedimiento FROM animal a INNER JOIN chequeo c ON a.id_animal = c.id_animal INNER JOIN procedimiento p ON c.id_procedimiento = p.id_procedimiento INNER JOIN tipo t ON p.id_tipo = t.id_tipo;
+5---Vista de los animales y los trabajadores encargados de suministrar alimento:
+CREATE VIEW vista_animales_suministro AS SELECT a.id_animal, a.peso, a.edad, a.genero, s.hora, s.cantidad, t.nombre AS trabajador, al.nombre AS tipo_alimento FROM animal a INNER JOIN suministro s ON a.id_animal = s.id_animal INNER JOIN trabajor t ON s.id_trabajador = t.id_trabajador INNER JOIN alimento al ON s.id_alimento = al.id_alimento;
+6-----Vista de los animales y los tipos de alimentación recomendados:
+CREATE VIEW vista_animales_tipo_alimento AS SELECT a.id_animal, a.peso, a.edad, a.genero, t.tipo AS tipo_recomendado, al.nombre AS tipo_alimento FROM animal a INNER JOIN tipo t ON a.id_tipo_animal = t.id_tipo INNER JOIN alimento al ON a.id_tipo_animal = al.id_tipo_alimento;
+7-----Vista de los animales y sus veterinarios asignados:
+CREATE VIEW vista_animales_veterinario AS
+SELECT a.id_animal, a.peso, a.edad, a.genero, v.nombre AS veterinario, v.especializacion
+FROM animal a
+INNER JOIN chequeo c ON a.id_animal = c.id_animal
+INNER JOIN veterinario v ON c.id_veterinario = v.id_veterinario;
+8-----Vista de los tipos de animales y sus respectivos alimentos:
+CREATE VIEW vista_tipos_animales_alimento AS SELECT t.tipo AS tipo_animal, GROUP_CONCAT(al.nombre SEPARATOR ', ') AS tipos_alimento FROM tipo t INNER JOIN animal a ON a.id_tipo_animal = t.id_tipo INNER JOIN alimento al ON a.id_tipo_animal = al.id_tipo_alimento GROUP BY t.tipo;
+9----vista de los procedimientos
+CREATE VIEW vista_procedimientos AS
+SELECT p.id_procedimiento, p.fecha_chequeo, t.tipo
+FROM procedimiento p
+INNER JOIN tipo t ON p.id_tipo = t.id_tipo;
+10-----La vista "vista_chequeos" muestra información resumida de los chequeos realizados, incluyendo el ID del chequeo, la fecha, el peso, las recomendaciones, el nombre del veterinario y el ID del tipo de procedimiento asociado.
+CREATE VIEW vista_chequeos AS SELECT c.id_chequeo, c.fecha_chequeo, c.peso, c.recomendaciones, v.nombre AS veterinario, p.id_tipo AS tipo_procedimiento FROM chequeo c INNER JOIN veterinario v ON c.id_veterinario = v.id_veterinario INNER JOIN procedimiento p ON c.id_procedimiento = p.id_procedimiento;
+
+funciones:
+
+esta función calcula el promedio de pesos de todos los animales
+DELIMITER //
+
+CREATE FUNCTION calcularPromedioPesoTipoAnimal(idTipoAnimal INT)
+RETURNS DECIMAL(10,2)
+BEGIN
+  DECLARE promedio DECIMAL(10,2);
+  
+  SELECT AVG(peso) INTO promedio
+  FROM animal
+  WHERE id_tipo_animal = idTipoAnimal;
+  
+  RETURN promedio;
+END //
+
+DELIMITER ;
+
+-llama la función; 
+SELECT calcularPromedioPesoTipoAnimal(1);
+
+
+
+
+esta función llama la cantidad de tipos de animales que hay
+
+DELIMITER //
+
+CREATE FUNCTION obtenerCantidadAnimalesTipo(idTipoAnimal INT)
+RETURNS INT
+BEGIN
+  DECLARE cantidad INT;
+  
+  SELECT COUNT(*) INTO cantidad
+  FROM animal
+  WHERE id_tipo_animal = idTipoAnimal;
+  
+  RETURN cantidad;
+END //
+
+DELIMITER ;
+
+-llama la función
+SELECT obtenerCantidadAnimalesTipo(1);
+-3 
+Este código crea una función llamada obtenerPromedioEdadAnimalesTipo que calcula el promedio de edad de los animales de un determinado tipo
+
+DELIMITER //
+
+CREATE FUNCTION obtenerPromedioEdadAnimalesTipo(idTipoAnimal INT)
+RETURNS FLOAT
+BEGIN
+  DECLARE promedioEdad FLOAT;
+  
+  SELECT AVG(edad) INTO promedioEdad
+  FROM animal
+  WHERE id_tipo_animal = idTipoAnimal;
+  
+  RETURN promedioEdad;
+END //
+
+DELIMITER ;
+
+SELECTobtenerPromedioEdadAnimalesTipo(1);
+
+
+
+
+4 Este código crea una función llamada obtenerCantidadAnimalesPorGenero que cuenta la cantidad de animales de un determinado género.
+
+DELIMITER //
+
+CREATE FUNCTION obtenerCantidadAnimalesPorGenero(genero VARCHAR(10))
+RETURNS INT
+BEGIN
+  DECLARE cantidad INT;
+  
+  SELECT COUNT(*) INTO cantidad
+  FROM animal
+  WHERE genero = genero;
+  
+  RETURN cantidad;
+END //
+
+DELIMITER ;
+
+SELECT  obtenerCantidadAnimalesPorGenero(1);
+
+
+
+5-
+DELIMITER //
+
+CREATE FUNCTION modificar_tipo(
+    p_id_tipo INT,
+    p_nuevo_tipo VARCHAR(150)
+)
+RETURNS INT
+BEGIN
+    DECLARE rows_affected INT;
+
+    UPDATE tipo
+    SET tipo = p_nuevo_tipo
+    WHERE id_tipo = p_id_tipo;
+
+    SET rows_affected = ROW_COUNT();
+
+    RETURN rows_affected;
+END //
+
+DELIMITER ;
+
+
+SELECT modificar_tipo(1, 'Nuevo tipo de vaca');
+
+6-
+DELIMITER // CREATE FUNCTION insertarVeterinario ( id INT, nombre VARCHAR(20), telefono INT, especializacion VARCHAR(30) ) RETURNS INT BEGIN DECLARE numRows INT; INSERT INTO veterinario (id_veterinario, nombre, telefono, especializacion) VALUES (id, nombre, telefono, especializacion); SET numRows = ROW_COUNT(); RETURN numRows; END // DELIMITER ;
+
+SELECT insertarVeterinario(16, 'Pedro Sanchez', 327323343, 'produccion animal');
+
+7-
+DELIMITER //
+
+CREATE FUNCTION insertar_suministro(
+  p_id_suministro INT,
+  p_hora TIME,
+  p_cantidad INT,
+  p_id_trabajador INT,
+  p_id_animal INT,
+  p_id_alimento INT
+)
+RETURNS INT
+BEGIN
+  INSERT INTO suministro (id_suministro, hora, cantidad, id_trabajador, id_animal, id_alimento)
+  VALUES (p_id_suministro, p_hora, p_cantidad, p_id_trabajador, p_id_animal, p_id_alimento);
+  
+  RETURN LAST_INSERT_ID();
+END //
+
+DELIMITER ;
+SELECT insertar_suministro(16, '14:30:00', 4, 5, 6, 7);
+8-
+DELIMITER //
+
+CREATE FUNCTION modificar_procedimiento(
+  p_id_procedimiento INT,
+  p_fecha_chequeo DATETIME,
+  p_id_tipo INT
+)
+RETURNS BOOLEAN
+BEGIN
+  DECLARE rows_affected INT;
+
+  UPDATE procedimiento
+  SET fecha_chequeo = p_fecha_chequeo,
+      id_tipo = p_id_tipo
+  WHERE id_procedimiento = p_id_procedimiento;
+
+  SET rows_affected = ROW_COUNT();
+
+  IF rows_affected > 0 THEN
+    RETURN TRUE;
+  ELSE
+    RETURN FALSE;
+  END IF;
+END //
+
+DELIMITER ;
+SELECT modificar_procedimiento(1, '2023-05-10 09:00:00', 3);
+
+9
+DELIMITER //
+
+CREATE FUNCTION modificar_chequeo(
+  p_id_chequeo INT,
+  p_fecha_chequeo DATETIME,
+  p_peso VARCHAR(150),
+  p_recomendaciones VARCHAR(50),
+  p_id_veterinario INT,
+  p_id_procedimiento INT,
+  p_id_animal INT
+)
+RETURNS BOOLEAN
+BEGIN
+  DECLARE rows_affected INT;
+
+  UPDATE chequeo
+  SET fecha_chequeo = p_fecha_chequeo,
+      peso = p_peso,
+      recomendaciones = p_recomendaciones,
+      id_veterinario = p_id_veterinario,
+      id_procedimiento = p_id_procedimiento,
+      id_animal = p_id_animal
+  WHERE id_chequeo = p_id_chequeo;
+
+  SET rows_affected = ROW_COUNT();
+
+  IF rows_affected > 0 THEN
+    RETURN TRUE;
+  ELSE
+    RETURN FALSE;
+  END IF;
+END //
+
+DELIMITER ;
+
+SELECT modificar_chequeo(1, '2023-05-10 09:00:00', '550', 'Revisión adicional requerida', 1, 1, 1);
+
+
+
+10)
+
+DELIMITER //
+
+CREATE FUNCTION modificar_animal(
+  animal_id INT,
+  new_peso INT,
+  new_edad INT,
+  new_genero VARCHAR(50),
+  new_tipo_animal INT
+)
+RETURNS VARCHAR(50)
+BEGIN
+  DECLARE message VARCHAR(50);
+
+  UPDATE `animal`
+  SET
+    `peso` = new_peso,
+    `edad` = new_edad,
+    `genero` = new_genero,
+    `id_tipo_animal` = new_tipo_animal
+  WHERE
+    `id_animal` = animal_id;
+
+  IF ROW_COUNT() > 0 THEN
+    SET message = 'Animal actualizado correctamente.';
+  ELSE
+    SET message = 'No se encontró ningún animal con el ID especificado.';
+  END IF;
+
+  RETURN message;
+END //
+
+DELIMITER ;
+
+SELECT modificar_animal(1, 350, 3, 'Macho', 2);
+*/
